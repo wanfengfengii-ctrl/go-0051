@@ -126,6 +126,9 @@ func readFull(r interface{ Read(p []byte) (int, error) }, dst []byte) (int, erro
 	for total < len(dst) {
 		n, err := r.Read(dst[total:])
 		total += n
+		if total == len(dst) {
+			return total, nil
+		}
 		if err != nil {
 			return total, err
 		}
