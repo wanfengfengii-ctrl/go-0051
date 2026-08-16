@@ -75,7 +75,7 @@ func DecodeMessage(msg []byte) (Message, error) {
 	return m, nil
 }
 
-func decodeRRs(msg []byte, off, count int, _ []Question, dst *[]RR) ([]Question, int, error) {
+func decodeRRs(msg []byte, off, count int, questions []Question, dst *[]RR) ([]Question, int, error) {
 	for i := 0; i < count; i++ {
 		rr, no, err := DecodeRR(msg, off)
 		if err != nil {
@@ -84,7 +84,7 @@ func decodeRRs(msg []byte, off, count int, _ []Question, dst *[]RR) ([]Question,
 		*dst = append(*dst, rr)
 		off = no
 	}
-	return nil, off, nil
+	return questions, off, nil
 }
 
 // ReadTCPFrame reads a single DNS-over-TCP message: a 2-byte big-endian length

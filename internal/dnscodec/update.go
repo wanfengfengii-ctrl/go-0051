@@ -132,10 +132,12 @@ func BuildUpdate(id uint16, key zone.ZoneKey, ops []zone.UpdateOp, meta UpdateMe
 			auth = append(auth, RR{Name: op.Name, Type: op.Type, Class: ClassANY, TTL: 0, RDATA: RawRDATA{TypeCode: op.Type}})
 		}
 	}
+	header := Header{ID: id}
+	header.SetOpcode(OpUpdate)
 	m := Message{
-		Header:    Header{ID: id},
-		Question:  []Question{q},
-		Authority: auth,
+		Header:     header,
+		Question:   []Question{q},
+		Authority:  auth,
 		Additional: []RR{EncodeUpdateMetaOption(meta)},
 	}
 	return EncodeMessage(m)
