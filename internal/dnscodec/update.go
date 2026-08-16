@@ -138,5 +138,9 @@ func BuildUpdate(id uint16, key zone.ZoneKey, ops []zone.UpdateOp, meta UpdateMe
 		Authority: auth,
 		Additional: []RR{EncodeUpdateMetaOption(meta)},
 	}
+	// RFC 2136 §3.2.1 requires opcode UPDATE (5) in the message header; a
+	// freshly built Header leaves Flags at zero (QUERY, opcode 0), which would
+	// make the round-tripped message fail ParseUpdate's opcode check.
+	m.Header.SetOpcode(OpUpdate)
 	return EncodeMessage(m)
 }

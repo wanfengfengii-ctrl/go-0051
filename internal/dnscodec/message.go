@@ -75,16 +75,21 @@ func DecodeMessage(msg []byte) (Message, error) {
 	return m, nil
 }
 
-func decodeRRs(msg []byte, off, count int, _ []Question, dst *[]RR) ([]Question, int, error) {
+// decodeRRs reads count RRs into dst. The qs argument is the question section
+// decoded so far; it is threaded through and returned unchanged so that
+// DecodeMessage preserves m.Question across the answer, authority and
+// additional sections instead of wiping it (which left ParseUpdate unable to
+// recover the UPDATE zone section after decoding).
+func decodeRRs(msg []byte, off, count int, qs []Question, dst *[]RR) ([]Question, int, error) {
 	for i := 0; i < count; i++ {
 		rr, no, err := DecodeRR(msg, off)
 		if err != nil {
-			return nil, off, err
+			return qs, off, err
 		}
 		*dst = append(*dst, rr)
 		off = no
 	}
-	return nil, off, nil
+	return qs, off, nil
 }
 
 // ReadTCPFrame reads a single DNS-over-TCP message: a 2-byte big-endian length
