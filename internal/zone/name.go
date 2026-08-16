@@ -86,9 +86,14 @@ func NormalizeName(s string) (Name, error) {
 		return Name("."), nil
 	}
 	labels := strings.Split(s, ".")
+	wireLen := 1 // Root label terminator.
 	for _, l := range labels {
 		if err := validateLabel(l); err != nil {
 			return "", err
+		}
+		wireLen += 1 + len(l)
+		if wireLen > 255 {
+			return "", fmt.Errorf("%w: name exceeds 255 octets", ErrInvalidName)
 		}
 	}
 	return Name(strings.ToLower(s) + "."), nil

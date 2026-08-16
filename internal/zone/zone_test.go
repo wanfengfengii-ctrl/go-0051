@@ -2,6 +2,7 @@ package zone
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 )
 
@@ -64,6 +65,40 @@ func TestNormalizeNameErrors(t *testing.T) {
 		if _, err := NormalizeName(in); err == nil {
 			t.Errorf("NormalizeName(%q) expected error", in)
 		}
+	}
+}
+
+func TestNormalizeNameWireLengthBoundary(t *testing.T) {
+	label63 := repeat("a", 63)
+	cases := []struct {
+		name    string
+		in      string
+		want    Name
+		wantErr bool
+	}{
+		{name: "root", in: ".", want: "."},
+		{name: "ordinary", in: "WWW.Example.COM", want: "www.example.com."},
+		{name: "maximum wire length", in: label63 + "." + label63 + "." + label63 + "." + repeat("b", 61), want: Name(label63 + "." + label63 + "." + label63 + "." + repeat("b", 61) + ".")},
+		{name: "overlong by one octet", in: label63 + "." + label63 + "." + label63 + "." + repeat("b", 62), wantErr: true},
+		{name: "overlong by two octets", in: label63 + "." + label63 + "." + label63 + "." + label63, wantErr: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := NormalizeName(tc.in)
+			if tc.wantErr {
+				if !errors.Is(err, ErrInvalidName) {
+					t.Fatalf("NormalizeName() error = %v, want ErrInvalidName", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("NormalizeName() unexpected error: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("NormalizeName() = %q, want %q", got, tc.want)
+			}
+		})
 	}
 }
 
