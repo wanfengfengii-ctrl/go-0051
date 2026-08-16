@@ -24,7 +24,7 @@ type RawRDATA struct {
 	Bytes    []byte
 }
 
-func (r RawRDATA) Type() zone.Type        { return r.TypeCode }
+func (r RawRDATA) Type() zone.Type { return r.TypeCode }
 func (r RawRDATA) Equal(o zone.RDATA) bool {
 	v, ok := o.(RawRDATA)
 	return ok && r.TypeCode == v.TypeCode && string(r.Bytes) == string(v.Bytes)
@@ -157,8 +157,8 @@ func decodeRDATA(msg []byte, start, end int, t zone.Type) (zone.RDATA, error) {
 		if p2 > end {
 			return nil, fmt.Errorf("%w: SOA RNAME extends past RDLENGTH", ErrTruncated)
 		}
-		if end-p2 < 20 {
-			return nil, fmt.Errorf("%w: SOA fixed fields truncated", ErrTruncated)
+		if end-p2 != 20 {
+			return nil, fmt.Errorf("%w: SOA fixed fields length %d != 20", ErrTruncated, end-p2)
 		}
 		return zone.SOA{
 			MName:   mname,
