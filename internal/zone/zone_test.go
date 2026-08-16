@@ -2,6 +2,8 @@ package zone
 
 import (
 	"bytes"
+	"errors"
+	"strings"
 	"testing"
 )
 
@@ -73,6 +75,57 @@ func repeat(s string, n int) string {
 		out += s
 	}
 	return out
+}
+
+func TestNormalizeNameWireLength(t *testing.T) {
+	label := func(n int) string { return strings.Repeat("a", n) }
+
+	// 255 wire octets is the maximum legal name length: four labels of 63, 63,
+	// 63 and 61 octets encode to (1+63)+(1+63)+(1+63)+(1+61)+1 = 255.
+	maxLegal := label(63) + "." + label(63) + "." + label(63) + "." + label(61)
+	n, err := NormalizeName(maxLegal)
+	if err != nil {
+		t.Fatalf("NormalizeName(max-legal): %v", err)
+	}
+	if got := len(canonicalWireName(n)); got != 255 {
+		t.Errorf("max-legal wire length = %d, want 255", got)
+	}
+
+	// One octet over the limit: last label grows from 61 to 62 (wire 256).
+	overOne := label(63) + "." + label(63) + "." + label(63) + "." + label(62)
+	if _, err := NormalizeName(overOne); err == nil {
+		t.Fatal("NormalizeName(over-by-one) expected error")
+	} else if !errors.Is(err, ErrInvalidName) {
+		t.Errorf("over-by-one error = %v, want errors.Is ErrInvalidName", err)
+	}
+
+	// Two octets over: four 63-octet labels (wire 257, the reported defect).
+	overTwo := label(63) + "." + label(63) + "." + label(63) + "." + label(63)
+	if _, err := NormalizeName(overTwo); err == nil {
+		t.Fatal("NormalizeName(over-by-two) expected error")
+	} else if !errors.Is(err, ErrInvalidName) {
+		t.Errorf("over-by-two error = %v, want errors.Is ErrInvalidName", err)
+	}
+
+	// Existing valid name behavior is unaffected by the wire-length guard.
+	for _, c := range []struct {
+		in   string
+		want Name
+	}{
+		{".", "."},
+		{"", "."},
+		{"example.com", "example.com."},
+		{"EXAMPLE.COM.", "example.com."},
+		{"a.b.c.example.com", "a.b.c.example.com."},
+	} {
+		got, err := NormalizeName(c.in)
+		if err != nil {
+			t.Fatalf("NormalizeName(%q): %v", c.in, err)
+		}
+		if got != c.want {
+			t.Errorf("NormalizeName(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
 }
 
 func TestCompareName(t *testing.T) {

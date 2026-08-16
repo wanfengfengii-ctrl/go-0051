@@ -76,6 +76,11 @@ func (k ZoneKey) String() string {
 // ErrInvalidName is returned when a name cannot be normalized.
 var ErrInvalidName = errors.New("zone: invalid name")
 
+// maxWireNameLength is the maximum number of octets in the wire encoding of a
+// domain name: the sum of every label-length octet and label content, plus the
+// terminating zero-length root label, must not exceed 255 (RFC 1035 §3.1).
+const maxWireNameLength = 255
+
 // NormalizeName parses a textual domain name and returns its canonical form.
 // The input may omit the trailing dot and may use any case; the result is
 // lowercased and ends with a single dot. The root zone is ".".
@@ -91,7 +96,14 @@ func NormalizeName(s string) (Name, error) {
 			return "", err
 		}
 	}
-	return Name(strings.ToLower(s) + "."), nil
+	name := Name(strings.ToLower(s) + ".")
+	// The uncompressed wire encoding (length-prefixed labels plus the
+	// terminating root label) must fit in 255 octets. Each label is already
+	// bounded to 63 octets above; this guards the total across all labels.
+	if wireLen := len(canonicalWireName(name)); wireLen > maxWireNameLength {
+		return "", fmt.Errorf("%w: name %q exceeds %d wire octets (%d)", ErrInvalidName, s, maxWireNameLength, wireLen)
+	}
+	return name, nil
 }
 
 // MustNormalizeName panics on invalid input; for use in tests and constants.
