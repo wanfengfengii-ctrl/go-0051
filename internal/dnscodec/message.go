@@ -60,13 +60,13 @@ func DecodeMessage(msg []byte) (Message, error) {
 		m.Question = append(m.Question, q)
 		off = no
 	}
-	if m.Question, off, err = decodeRRs(msg, off, int(h.ANCount), m.Question, &m.Answers); err != nil {
+	if off, err = decodeRRs(msg, off, int(h.ANCount), &m.Answers); err != nil {
 		return m, err
 	}
-	if m.Question, off, err = decodeRRs(msg, off, int(h.NSCount), m.Question, &m.Authority); err != nil {
+	if off, err = decodeRRs(msg, off, int(h.NSCount), &m.Authority); err != nil {
 		return m, err
 	}
-	if m.Question, off, err = decodeRRs(msg, off, int(h.ARCount), m.Question, &m.Additional); err != nil {
+	if off, err = decodeRRs(msg, off, int(h.ARCount), &m.Additional); err != nil {
 		return m, err
 	}
 	if off != len(msg) {
@@ -75,16 +75,16 @@ func DecodeMessage(msg []byte) (Message, error) {
 	return m, nil
 }
 
-func decodeRRs(msg []byte, off, count int, _ []Question, dst *[]RR) ([]Question, int, error) {
+func decodeRRs(msg []byte, off, count int, dst *[]RR) (int, error) {
 	for i := 0; i < count; i++ {
 		rr, no, err := DecodeRR(msg, off)
 		if err != nil {
-			return nil, off, err
+			return off, err
 		}
 		*dst = append(*dst, rr)
 		off = no
 	}
-	return nil, off, nil
+	return off, nil
 }
 
 // ReadTCPFrame reads a single DNS-over-TCP message: a 2-byte big-endian length
