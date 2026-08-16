@@ -126,6 +126,14 @@ func readFull(r interface{ Read(p []byte) (int, error) }, dst []byte) (int, erro
 	for total < len(dst) {
 		n, err := r.Read(dst[total:])
 		total += n
+		// Per the io.Reader contract, a reader may return the final chunk of
+		// an otherwise complete payload together with io.EOF. Having read the
+		// full requested length is success regardless of a trailing error; only
+		// an actual shortfall is reported, so the caller can classify it as a
+		// truncation rather than discarding a complete frame.
+		if total == len(dst) {
+			return total, nil
+		}
 		if err != nil {
 			return total, err
 		}
